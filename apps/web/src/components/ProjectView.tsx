@@ -7110,6 +7110,7 @@ export function ProjectView({
               artifactCount: status.artifactCount,
               persistenceSucceeded: artifactPersistenceSucceeded,
               persistenceFailed: artifactPersistenceError !== undefined,
+              projectResolvedDir: projectDetail.resolvedDir,
             });
             updateMessageById(
               message.id,
@@ -7652,6 +7653,7 @@ export function ProjectView({
                   artifactCount: daemonArtifactCount,
                   persistenceSucceeded: artifactPersistenceSucceeded,
                   persistenceFailed: artifactPersistenceError !== undefined,
+                  projectResolvedDir: projectDetail.resolvedDir,
                 });
                 updateMessageById(
                   message.id,
@@ -9992,6 +9994,7 @@ export function ProjectView({
                 artifactCount: daemonArtifactCount,
                 persistenceSucceeded: artifactPersistenceSucceeded,
                 persistenceFailed: artifactPersistenceError !== undefined,
+                projectResolvedDir: projectDetail.resolvedDir,
               });
               const finalized = applyDesignDeliveryOutcome(
                 deliveryCandidate,

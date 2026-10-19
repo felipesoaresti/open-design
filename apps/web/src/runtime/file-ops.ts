@@ -10,7 +10,7 @@
  * expanding tool-group disclosures.
  */
 import type { AgentEvent } from '../types';
-import { resolveChatFileLink } from './in-project-link';
+import { isProvablyOutsideProjectDir, resolveChatFileLink } from './in-project-link';
 import { dedupeToolUsesById, isInFlightToolUse } from './tool-events';
 
 export type FileOpKind = 'read' | 'write' | 'edit' | 'delete';
@@ -220,16 +220,27 @@ export function deriveFileOps(
  * or a simple Bash rm/unlink), regardless of whether the attempt succeeded.
  * Tool names must stay aligned with the daemon's cross-runtime
  * `WRITE_OR_EDIT_TOOL_NAMES` set in `apps/daemon/src/runtimes/run-artifacts.ts`.
+ *
+ * With `projectResolvedDir`, mutations whose target provably lives outside the
+ * project (a linked code folder, say) are not project mutations and are
+ * skipped. A mutation with no readable path still counts.
  */
-export function hasFileMutationToolUse(events: AgentEvent[] | undefined): boolean {
+export function hasFileMutationToolUse(
+  events: AgentEvent[] | undefined,
+  projectResolvedDir?: string | null,
+): boolean {
+  const targetsProject = (path: string | null) =>
+    path === null || !isProvablyOutsideProjectDir(path, projectResolvedDir);
   for (const ev of events ?? []) {
     if (ev.kind !== 'tool_use') continue;
     if (ev.name === 'Bash') {
-      if (extractSimpleBashDeletes(ev.input).length > 0) return true;
+      if (extractSimpleBashDeletes(ev.input).some(targetsProject)) return true;
       continue;
     }
     const kind = classify(ev.name);
-    if (kind === 'write' || kind === 'edit' || kind === 'delete') return true;
+    if ((kind === 'write' || kind === 'edit' || kind === 'delete') && targetsProject(extractPath(ev.input))) {
+      return true;
+    }
   }
   return false;
 }

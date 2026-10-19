@@ -55,6 +55,61 @@ describe('resolveDesignDeliveryOutcome', () => {
     }
   });
 
+  it('does not count writes provably outside the project directory as a delivery attempt', () => {
+    // A project with a linked code folder: the agent edits that folder, not
+    // the project. Those writes cannot land as project files, so they must
+    // not downgrade the turn to a missing deliverable.
+    const projectResolvedDir = '/data/projects/p-1';
+    const externalWrites = [
+      { kind: 'tool_use' as const, id: 'w-1', name: 'Write', input: { file_path: '/home/me/code/app/tests/test_fix.py' } },
+      { kind: 'tool_use' as const, id: 'e-1', name: 'Edit', input: { file_path: '/home/me/code/app/src/main.py' } },
+      { kind: 'tool_use' as const, id: 'b-1', name: 'Bash', input: { command: 'rm /home/me/code/app/old.py' } },
+    ];
+    expect(
+      resolveDesignDeliveryOutcome({
+        sessionMode: 'design',
+        runStatus: 'succeeded',
+        content: 'Fixed the linked app and added tests.',
+        events: externalWrites,
+        producedFileCount: 0,
+        traceObjectFileCount: 0,
+        projectResolvedDir,
+      }),
+    ).toBe('report_only');
+
+    // A write inside the project still requires a delivered file.
+    for (const inProject of [
+      { kind: 'tool_use' as const, id: 'w-2', name: 'Write', input: { file_path: '/data/projects/p-1/index.html' } },
+      { kind: 'tool_use' as const, id: 'w-3', name: 'Write', input: { file_path: 'index.html' } },
+      // A traversal is not provably outside, so it stays conservative.
+      { kind: 'tool_use' as const, id: 'w-4', name: 'Write', input: { file_path: '/data/projects/p-1/../p-1/index.html' } },
+    ]) {
+      expect(
+        resolveDesignDeliveryOutcome({
+          sessionMode: 'design',
+          runStatus: 'succeeded',
+          content: 'Fixed the linked app and added tests.',
+          events: [...externalWrites, inProject],
+          producedFileCount: 0,
+          traceObjectFileCount: 0,
+          projectResolvedDir,
+        }),
+      ).toBe('no_result');
+    }
+
+    // Without the project directory nothing is provably external.
+    expect(
+      resolveDesignDeliveryOutcome({
+        sessionMode: 'design',
+        runStatus: 'succeeded',
+        content: 'Fixed the linked app and added tests.',
+        events: externalWrites,
+        producedFileCount: 0,
+        traceObjectFileCount: 0,
+      }),
+    ).toBe('no_result');
+  });
+
   it('does not accept an empty answer as a report-only result', () => {
     expect(
       resolveDesignDeliveryOutcome({

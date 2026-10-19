@@ -26,6 +26,12 @@ export interface DesignDeliveryInput {
   artifactCount?: number;
   persistenceSucceeded?: boolean;
   persistenceFailed?: boolean;
+  /**
+   * The project's daemon-resolved working directory. Writes provably outside
+   * it (linked folders) cannot land as project files, so they do not count
+   * as a delivery attempt.
+   */
+  projectResolvedDir?: string | null;
 }
 
 /**
@@ -104,7 +110,10 @@ export function resolveDesignDeliveryOutcome(
   }
   if (input.persistenceFailed) return 'delivery_failed';
   if (containsUnrenderableQuestionForm(input.content)) return 'no_result';
-  if (!hasFileMutationToolUse(input.events) && input.content.trim().length > 0) {
+  if (
+    !hasFileMutationToolUse(input.events, input.projectResolvedDir) &&
+    input.content.trim().length > 0
+  ) {
     return 'report_only';
   }
   return 'no_result';

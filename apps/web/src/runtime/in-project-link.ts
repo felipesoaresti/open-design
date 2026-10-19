@@ -184,6 +184,28 @@ function resolveAgainstResolvedDir(
 }
 
 /**
+ * Whether `path` is an absolute disk path that provably lives outside the
+ * project's daemon-resolved working directory (e.g. a linked code folder).
+ * Answers only from positive proof: relative paths, traversals, and a
+ * missing `projectResolvedDir` all return false, so callers stay
+ * conservative whenever ownership cannot be shown.
+ */
+export function isProvablyOutsideProjectDir(
+  path: string,
+  projectResolvedDir: string | null | undefined,
+): boolean {
+  if (!projectResolvedDir) return false;
+  const target = normalizeDiskPath(path.trim());
+  if (!target) return false;
+  if (target.split('/').some((segment) => segment === '..')) return false;
+  const resolvedDir = normalizeDiskPath(projectResolvedDir.replace(/[\\/]+$/, ''));
+  if (!resolvedDir) return false;
+  const targetKey = diskPathComparisonKey(target);
+  const resolvedDirKey = diskPathComparisonKey(resolvedDir);
+  return targetKey !== resolvedDirKey && !targetKey.startsWith(`${resolvedDirKey}/`);
+}
+
+/**
  * Whether an unresolvable chat href is path-like with no useful default —
  * schemeless (after same-origin normalization), not a fragment, not a
  * protocol-relative network URL, and NOT a route the SPA router recognizes.
