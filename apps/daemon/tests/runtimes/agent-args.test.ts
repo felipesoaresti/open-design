@@ -89,6 +89,7 @@ test('opencode args pass model-supported variants without changing the default a
   )?.reasoningOptions, undefined);
   assert.deepEqual(opencode.helpArgs, ['run', '--help']);
   assert.deepEqual(opencode.capabilityFlags?.['--dangerously-skip-permissions'], 'skipPermissions');
+  assert.deepEqual(opencode.capabilityFlags?.['--auto'], 'autoApprovePermissions');
   assert.equal(baseArgs.includes('-'), false);
   assert.equal(baseArgs.includes(prompt), false);
   assert.deepEqual(baseArgs, [
@@ -233,6 +234,30 @@ test('opencode passes --dangerously-skip-permissions when the help probe finds i
       'json',
       '--dangerously-skip-permissions',
     ]);
+  } finally {
+    agentCapabilities.delete('opencode');
+  }
+});
+
+test('opencode passes --auto when the build only advertises the renamed bypass flag', () => {
+  // OpenCode 1.19 renamed `--dangerously-skip-permissions` to `--auto`. Without
+  // either flag, `opencode run` auto-rejects every `external_directory`
+  // permission, so reading a linked folder outside the project fails with
+  // "The user rejected permission to use this specific tool call."
+  agentCapabilities.set('opencode', { autoApprovePermissions: true });
+  try {
+    const args = opencode.buildArgs('design a dashboard', [], [], {});
+    assert.deepEqual(args, ['run', '--format', 'json', '--auto']);
+  } finally {
+    agentCapabilities.delete('opencode');
+  }
+});
+
+test('opencode prefers --dangerously-skip-permissions when both flags are advertised', () => {
+  agentCapabilities.set('opencode', { skipPermissions: true, autoApprovePermissions: true });
+  try {
+    const args = opencode.buildArgs('design a dashboard', [], [], {});
+    assert.deepEqual(args, ['run', '--format', 'json', '--dangerously-skip-permissions']);
   } finally {
     agentCapabilities.delete('opencode');
   }

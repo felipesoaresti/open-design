@@ -2,18 +2,31 @@ import { agentCapabilities } from './capabilities.js';
 import type { RuntimeAgentDef } from './types.js';
 
 export const OPENCODE_SKIP_PERMISSIONS_FLAG = '--dangerously-skip-permissions';
+// OpenCode 1.19 renamed the bypass flag to `--auto` ("auto-approve permissions
+// that are not explicitly denied") and dropped the old spelling.
+export const OPENCODE_AUTO_APPROVE_FLAG = '--auto';
 export const OPENCODE_WORKSPACE_DIR_FLAG = '--dir';
 
 export const OPENCODE_PERMISSION_CAPABILITY = {
   helpArgs: ['run', '--help'],
   capabilityFlags: {
     [OPENCODE_SKIP_PERMISSIONS_FLAG]: 'skipPermissions',
+    [OPENCODE_AUTO_APPROVE_FLAG]: 'autoApprovePermissions',
   },
 } satisfies Pick<RuntimeAgentDef, 'helpArgs' | 'capabilityFlags'>;
 
+/**
+ * Non-interactive `opencode run` auto-rejects every permission it would ask
+ * for, including `external_directory` reads of a linked folder outside the
+ * project. Pass whichever bypass spelling the installed build advertises,
+ * preferring the original flag when both are present.
+ */
 export function appendOpenCodePermissionBypass(args: string[], agentId: string): void {
-  if (agentCapabilities.get(agentId)?.skipPermissions) {
+  const caps = agentCapabilities.get(agentId);
+  if (caps?.skipPermissions) {
     args.push(OPENCODE_SKIP_PERMISSIONS_FLAG);
+  } else if (caps?.autoApprovePermissions) {
+    args.push(OPENCODE_AUTO_APPROVE_FLAG);
   }
 }
 

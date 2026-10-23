@@ -15,6 +15,7 @@ describe('byok-opencode runtime config', () => {
     expect(byokOpenCodeAgentDef.helpArgs).toEqual(['run', '--help']);
     expect(byokOpenCodeAgentDef.capabilityFlags).toEqual({
       '--dangerously-skip-permissions': 'skipPermissions',
+      '--auto': 'autoApprovePermissions',
     });
     expect(byokOpenCodeAgentDef.buildArgs('', [], [], {})).toEqual([
       'run',
